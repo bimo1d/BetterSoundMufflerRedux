@@ -1,0 +1,11 @@
+Key,Type,Description,English,Russian
+BetterSoundMuffler/Title,Text,,Better Sound Muffler Redux,Better Sound Muffler Redux
+BetterSoundMuffler/AppBar,Text,,Sound Muffler,Глушение звука
+Main,Text,,Main,Основные настройки
+Advanced,Text,,Advanced,Расширенные настройки
+BetterSoundMuffler/Settings/Enabled,Text,,Enable module,Включить модуль
+BetterSoundMuffler/Settings/EnabledTip,Text,,Enables vacuum muffling for gameplay part audio.,Включает приглушение звуков деталей в вакууме.
+BetterSoundMuffler/Settings/MuffleAmount,Text,,Vacuum muffling,Приглушение в вакууме
+BetterSoundMuffler/Settings/MuffleAmountTip,Text,,How strongly gameplay part audio is reduced in vacuum. Disable the module for stock sound.,Насколько сильно звуки деталей приглушаются в вакууме. Для стокового звука выключите модуль.
+BetterSoundMuffler/Advanced/DebugLogging,Text,,Enable debug logging,Включить отладку
+BetterSoundMuffler/Advanced/DebugLoggingTip,Text,,Writes Better Sound Muffler diagnostics to the KSP2 log.,Пишет диагностику Better Sound Muffler в лог KSP2.

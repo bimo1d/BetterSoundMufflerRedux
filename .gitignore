@@ -1,0 +1,12 @@
+.build/
+bin/
+obj/
+*.user
+*.suo
+*.csproj
+*.sln
+*.dll
+*.pdb
+*.zip
+*.7z
+BetterSoundMufflerRedux-config.json

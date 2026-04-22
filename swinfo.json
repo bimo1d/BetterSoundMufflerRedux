@@ -1,0 +1,24 @@
+{
+  "spec": "2.0",
+  "mod_id": "BetterSoundMufflerRedux",
+  "name": "Better Sound Muffler Redux",
+  "author": "bimo1d",
+  "description": "Adds configurable vacuum muffling for gameplay part audio.",
+  "source": "",
+  "version": "0.1a",
+  "ksp2_version": {
+    "min": "0.2.3.0",
+    "max": "*"
+  },
+  "dependencies": [
+    {
+      "id": "SpaceWarp2",
+      "version": {
+        "min": "2.0.0",
+        "max": "*"
+      }
+    }
+  ],
+  "conflicts": [],
+  "main_assembly": "BetterSoundMufflerRedux.dll"
+}
