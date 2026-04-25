@@ -16,6 +16,7 @@ namespace BetterSoundMufflerRedux
         private const float StopAllThreshold = 0.05f;
         private const float KerbinSeaLevelDensity = 1.225f;
         private const float DebugLogInterval = 0.5f;
+        private const float EmitterCacheRefreshInterval = 0.75f;
 
         private static BetterSoundMufflerController _active;
 
@@ -25,14 +26,19 @@ namespace BetterSoundMufflerRedux
         private readonly List<KSPPartAudioBase> _partAudioBuffer = new List<KSPPartAudioBase>();
         private readonly List<KSPVFXAudio> _vfxAudioBuffer = new List<KSPVFXAudio>();
         private readonly List<KSPAudioVessel> _vesselAudioBuffer = new List<KSPAudioVessel>();
+        private readonly List<AkWwiseEventPlayback> _eventPlaybackBuffer = new List<AkWwiseEventPlayback>();
+        private readonly List<GameObject> _emitterCache = new List<GameObject>();
+        private readonly HashSet<GameObject> _emitterCacheSet = new HashSet<GameObject>();
         private readonly Dictionary<string, float> _nextDebugLogTime = new Dictionary<string, float>();
         private GameObject _uiAudioObject;
+        private VesselBehavior _cachedBehavior;
         private bool _uiAudioLookupDone;
         private float _currentVolume = 1.0f;
         private bool _muffleActive;
         private float _lastAtmDensity = KerbinSeaLevelDensity;
         private bool _hadVessel;
         private float _gateLostAt = -1.0f;
+        private float _nextEmitterCacheRefreshTime;
 
         internal BetterSoundMufflerController(KerbalMod mod, BetterSoundMufflerConfig config)
         {
@@ -78,8 +84,12 @@ namespace BetterSoundMufflerRedux
             }
 
             _affected.Clear();
+            _emitterCache.Clear();
+            _emitterCacheSet.Clear();
+            _cachedBehavior = null;
             _muffleActive = false;
             _currentVolume = 1.0f;
+            _nextEmitterCacheRefreshTime = 0.0f;
             LogDebug("reset", "count=" + count);
         }
 
@@ -129,6 +139,11 @@ namespace BetterSoundMufflerRedux
             {
                 AkSoundEngine.StopAll(go);
             }
+        }
+
+        internal void RefreshEmitterCacheNow()
+        {
+            _nextEmitterCacheRefreshTime = 0.0f;
         }
 
         private void UpdateMuffling(VesselComponent vessel, VesselBehavior behavior)
@@ -211,21 +226,62 @@ namespace BetterSoundMufflerRedux
         {
             if (behavior == null) return;
 
-            SetEmitterVolume(behavior.gameObject, _currentVolume);
-            ScanBuffer(behavior, _partAudioBuffer);
-            ScanBuffer(behavior, _vfxAudioBuffer);
-            ScanBuffer(behavior, _vesselAudioBuffer);
+            if (_cachedBehavior != behavior || Time.unscaledTime >= _nextEmitterCacheRefreshTime)
+            {
+                RebuildEmitterCache(behavior);
+            }
+
+            for (int i = 0; i < _emitterCache.Count; i++)
+            {
+                SetEmitterVolume(_emitterCache[i], _currentVolume);
+            }
         }
 
-        private void ScanBuffer<T>(VesselBehavior behavior, List<T> buffer) where T : Component
+        private void RebuildEmitterCache(VesselBehavior behavior)
+        {
+            _cachedBehavior = behavior;
+            _nextEmitterCacheRefreshTime = Time.unscaledTime + EmitterCacheRefreshInterval;
+            _emitterCache.Clear();
+            _emitterCacheSet.Clear();
+
+            AddEmitter(behavior.gameObject);
+            ScanBufferToCache(behavior, _partAudioBuffer);
+            ScanBufferToCache(behavior, _vfxAudioBuffer);
+            ScanBufferToCache(behavior, _vesselAudioBuffer);
+            ScanBufferToCache(behavior, _eventPlaybackBuffer);
+
+            foreach (PartBehavior part in behavior.parts)
+            {
+                ScanPart(part);
+            }
+        }
+
+        private void ScanPart(PartBehavior part)
+        {
+            if (part == null) return;
+
+            AddEmitter(part.gameObject);
+            ScanBufferToCache(part, _partAudioBuffer);
+            ScanBufferToCache(part, _vfxAudioBuffer);
+            ScanBufferToCache(part, _eventPlaybackBuffer);
+        }
+
+        private void ScanBufferToCache<T>(Component root, List<T> buffer) where T : Component
         {
             buffer.Clear();
-            behavior.GetComponentsInChildren(true, buffer);
+            root.GetComponentsInChildren(true, buffer);
             for (int i = 0; i < buffer.Count; i++)
             {
                 T component = buffer[i];
-                if (component != null) SetEmitterVolume(component.gameObject, _currentVolume);
+                if (component != null) AddEmitter(component.gameObject);
             }
+        }
+
+        private void AddEmitter(GameObject go)
+        {
+            if (go == null || !_emitterCacheSet.Add(go)) return;
+
+            _emitterCache.Add(go);
         }
 
         private void SetEmitterVolume(GameObject go, float volume)
@@ -237,8 +293,6 @@ namespace BetterSoundMufflerRedux
             AkSoundEngine.SetScalingFactor(go, volume);
             AkSoundEngine.SetRTPCValue(KSPAudioParams.k_part_atmos_density_rtpc, 0.0f, go);
             AkSoundEngine.SetRTPCValue(KSPAudioParams.k_part_static_pressure_kPa_rtpc, 0.0f, go);
-
-            if (volume <= StopAllThreshold) AkSoundEngine.StopAll(go);
         }
 
         private bool IsUiAudio(GameObject go)

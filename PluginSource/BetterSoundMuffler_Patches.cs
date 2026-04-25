@@ -51,6 +51,20 @@ namespace BetterSoundMufflerRedux
             {
             }
         }
+
+        internal static void RefreshCache()
+        {
+            try
+            {
+                BetterSoundMufflerController active = BetterSoundMufflerController.Active;
+                if (active == null) return;
+
+                active.RefreshEmitterCacheNow();
+            }
+            catch
+            {
+            }
+        }
     }
 
     [HarmonyPatch(typeof(KSPBaseAudio), "PostEvent", new[] { typeof(string), typeof(GameObject), typeof(uint), typeof(AkCallbackManager.EventCallback), typeof(object) })]
@@ -143,6 +157,7 @@ namespace BetterSoundMufflerRedux
         private static void Postfix(FXContextualEvent __instance)
         {
             if (__instance == null) return;
+            BetterSoundMufflerPatchHelper.RefreshCache();
             BetterSoundMufflerPatchHelper.ApplyHierarchy("FXContextualEvent.Instantiate", __instance.SpawnedPrefab, "class=" + __instance.GetType().Name);
         }
     }
@@ -153,6 +168,7 @@ namespace BetterSoundMufflerRedux
         private static void Postfix(FXPersistantSurfaceContactContextualEvent __instance)
         {
             if (__instance == null) return;
+            BetterSoundMufflerPatchHelper.RefreshCache();
             BetterSoundMufflerPatchHelper.ApplyHierarchy("FXPersistantSurfaceContactContextualEvent.Instantiate", __instance.SpawnedPrefab, null);
         }
     }
@@ -163,7 +179,41 @@ namespace BetterSoundMufflerRedux
         private static void Postfix(FXWheelSurfaceContactContextualEvent __instance)
         {
             if (__instance == null) return;
+            BetterSoundMufflerPatchHelper.RefreshCache();
             BetterSoundMufflerPatchHelper.ApplyHierarchy("FXWheelSurfaceContactContextualEvent.Instantiate", __instance.SpawnedPrefab, null);
+        }
+    }
+
+    [HarmonyPatch(typeof(KSPPartAudioManager), "PostEvent")]
+    internal static class BetterSoundMufflerPartAudioManagerPostPatch
+    {
+        private static void Prefix(KSPPartAudioManager __instance)
+        {
+            if (__instance == null) return;
+
+            BetterSoundMufflerPatchHelper.RefreshCache();
+            ApplyPartAudio(__instance.PartAudio, "PartAudioManager.PostEvent:part");
+            ApplyPartAudio(__instance.PartEngineAudio, "PartAudioManager.PostEvent:engine");
+            ApplyPartAudio(__instance.PartGeneratorAudio, "PartAudioManager.PostEvent:generator");
+            ApplyPartAudio(__instance.PartWheelAudio, "PartAudioManager.PostEvent:wheel");
+            ApplyPartAudio(__instance.PartParachuteAudio, "PartAudioManager.PostEvent:parachute");
+            ApplyPartAudio(__instance.PartCoolingAudio, "PartAudioManager.PostEvent:cooling");
+        }
+
+        private static void ApplyPartAudio(KSPPartAudioBase audio, string patchName)
+        {
+            if (audio == null) return;
+
+            BetterSoundMufflerPatchHelper.Apply(patchName, audio.gameObject, null);
+        }
+    }
+
+    [HarmonyPatch(typeof(KSPPartAudioManager), "OnPartUndocked")]
+    internal static class BetterSoundMufflerPartUndockPatch
+    {
+        private static void Prefix()
+        {
+            BetterSoundMufflerPatchHelper.RefreshCache();
         }
     }
 }
